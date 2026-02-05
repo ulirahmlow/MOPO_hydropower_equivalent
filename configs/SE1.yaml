@@ -1,0 +1,59 @@
+files:
+  # Input files
+  day_file: days.csv #\SE1_2016_days.csv  #\SE1_2016_days.csv  #SE1_2016_days_test
+  train_price_file: price.csv
+  ext_inflow_file: LR_inflow_daily.csv # Not always
+  real_production: historical_production.csv # Not always
+  # Output files of the detaield model
+  M_file: meq.csv
+  basic_files: initial_params.csv
+  #pump_consumption: pump_consumption.csv
+  #cluster: SE1_period_EU_case.csv
+
+para_general:
+  category: !!int -1
+  segments: !!int 1
+  stations: !!int 1
+  segments_percent: [1] # [0.9 ,0.1]
+  small_ramp: !!int 1 # If -1 then turned off
+  long_ramp: !!int 3  # If -1 then turned off
+  alpha: [1] # [1] # share of energy content in each reservoir
+  up_aq: [0] # [[0,0],[1, 0]] [0] # upsteam stations
+  down_ad: [1] #  [[1,1],[0,1]] [1] # downstream stations
+
+para_PSO:
+  max_inter: !!int 100
+  population: !!int 20
+  use_multiprocessing: True  #True
+  first_level_objectiv: !!str 'against_real_production' # only_power, power_plus_spill total_production plus_peak_power against_real_production
+  intertia: !!float 0.9
+  c1: !!float 1.49
+  c2: !!float 1.49
+  tol: !!float 1.0e-5
+  wMin: !!float 0.3
+  wMax: !!float 0.9
+  wDelta: !!float 0.1
+  mu_percent: [1] # [1 , 0.25] # How much percent the mu per segment get from mu_0 calculation 
+  Q_break: []  # [1] [0.75, 0.25] # [0.75, 0.25]
+  #,'prod_spill_mul'] #,'mu_add'] #'mu_add', 'Smin', 'min_prod_multiplier','inflow_multiplier','rolling_prod_hours']
+  variables: [
+    'Mmax', 'Mmin', 'Qmax', 'Qmin', 
+    'ramp1h', 'ramp3h',
+    'mu_add',
+    'inflow_multiplier']
+  var_lim_min: {
+    'Mmax': 0.85, 'Mmin' : 0.1, 'Qmax': 0.25, 'Qmin': 0.01, 
+    'ramp1h': 0.05, 'ramp3h': 0.05,
+    'mu_add': 0.01,
+    'inflow_multiplier': 1} 
+    #'min_prod_multiplier': 0.5}
+    #'rolling_prod_hours': 24}
+  var_lim_max: {
+    'Mmax': 1.5, 'Mmin' : 0.4, 'Qmax': 2.5, 'Qmin': 6, 
+    'ramp1h': 1.2, 'ramp3h': 1.2, # ,
+    'mu_add': 0.8, 
+    'inflow_multiplier': 1.5}
+    #'min_prod_multiplier': 10}
+    #'rolling_prod_hours': 336} 
+
+output_filename_suffix: test_SE1_cluster_daily_seg_3
