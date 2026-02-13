@@ -93,18 +93,17 @@ def save_output(config,train_scenario,eq_updated, iteration_parameters,problem, 
     inflow_df, eq_df = save_eq(
         eqModel=eq_updated,
         conf = config)
-
-    save_config_file(config)
-
     # Save the rest
     eq_df.to_csv(output_folder + filename + "eqModelPSO.csv", sep=';')
+    iteration_parameters = pd.DataFrame.from_dict(iteration_parameters).T
     iteration_parameters.to_csv(output_folder + filename + "iteration_parameters.csv", sep=';')
 
     output_file_data = pd.DataFrame()
     eqModel_trainResults = solve_equivalent(train_scenario, eq_updated, problem, end_simulation=1)
     
+    save_config_file(config)
     # Remove initial equivalent power data which is equal to -1
-    eqModel_trainResults.power[ eqModel_trainResults.power == -1] = np.nan # TODO: Is 0 good here ? 
+    eqModel_trainResults.power[ eqModel_trainResults.power == -1] = np.nan 
     # Save equivalent model data
     if config['para_general']['stations']>1:
         eq_flow = eqModel_trainResults.q_flow.add_prefix('flow')
@@ -129,12 +128,16 @@ def save_output_pump(config,train_scenario,eq_updated, iteration_parameters,prob
     _, eq_df = save_eq(
         eqModel=eq_updated,
         conf = config)
-    save_config_file(config)
+    
     eq_df.to_csv(output_folder + filename + "eqModelPSO.csv", sep=';')
+    iteration_parameters = pd.DataFrame.from_dict(iteration_parameters).T
     iteration_parameters.to_csv(output_folder + filename + "iteration_parameters.csv", sep=';')
 
     output_file_data = pd.DataFrame()
     eqModel_trainResults = solve_equivalent_pump(train_scenario, eq_updated, problem, end_simulation=1)
+
+    save_config_file(config)
+
     eqPower = pd.DataFrame(eqModel_trainResults.power).rename(
         columns={f"scen{k}" :f"power_scen{k}" for k in range(1,eq_updated.scenarios+1)})
     eqContent = pd.DataFrame(eqModel_trainResults.content).add_prefix('content_scen')

@@ -25,6 +25,8 @@ class EqModel():
     scenarios : int = None              # Number of inflow scenarios
     upAq : pd.DataFrame = None          # Matrix of upstream reservoirs
     delay: pd.DataFrame = None          # Delay between two reservoirs
+    delay_hours: np.ndarray = None          # Delay in hours
+    delay_minutes: np.ndarray = None        # Delay in minutes
     indices: dict = None                # Indicies for simulation
     indices_with_segments: dict = None  # Indicies for Simulation
     indices_thermal: dict = None        # Indicies for Thermal Power Production

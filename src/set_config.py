@@ -117,8 +117,8 @@ def set_config(
 
     if 'real_production' in config['files']:
         config['files']['real_production'] = config['file_location']['input'] +'Historical Production\\' + area_year + config['files']['real_production']
-    if 'pump_consumption' in config['files']:
-        config['files']['pump_consumption'] = config['file_location']['input'] +'Historical Production\\' + area_year + config['files']['pump_consumption']
+    if 'pump_data' in config['files']:
+        config['files']['pump_data'] = config['file_location']['input'] +'Historical Production\\' + area_year + config['files']['pump_data']
     if 'cluster' in config['files']:
         config['files']['cluster'] = config['file_location']['input'] + config['files']['cluster']
 
@@ -129,7 +129,7 @@ def set_config(
 
 def check_existing_run(config):
     suffix_counter = 1
-    while os.path.exists(config['file_location']['output'] + "\\Equivalent solutions\\" + config['output_filename_suffix'] + "config.yaml"):
+    while os.path.exists(config['file_location']['output'] + config['output_filename_suffix'] + "config.yaml"):
         config['output_filename_suffix'] = config['output_filename_suffix'] + f'_{suffix_counter}'
         suffix_counter += 1
 

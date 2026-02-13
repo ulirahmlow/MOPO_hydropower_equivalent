@@ -394,7 +394,7 @@ def create_reservoir_content(train_scenario:ScenarioData, cluster_data,conf):
         else:
             m0_share = pd.concat([m0_share, m0_share_add], axis=1).interpolate()
             # Create MTminShare from real data of m0_share 
-            train_scenario.MTminShare[m0_share.columns[counter]] = m0_share_add.iloc[0,0] / m0_share.iloc[counter,0]
+            train_scenario.MTminShare[m0_share.columns[counter]] = m0_share_add.iloc[0,0] / m0_share.iloc[0,counter]
 
     train_scenario.M0share = m0_share
     if len(reservoir_content) < len(train_scenario.days)*24:

@@ -48,7 +48,13 @@ def create_inflow_scenarios(inflow, conf, scenario_data, dwnAd):
 
 def get_inflow_and_mu(conf:dict,avg_mu:pd.DataFrame,scenario_data:ScenarioData,dwnAd:np.ndarray):
 
-    inflow = pd.read_csv(conf['files']['ext_inflow_file'], sep=';',index_col=['time'], parse_dates=['time'])
+    inflow = pd.read_csv(conf['files']['ext_inflow_file'], sep=';')
+    if len(inflow.columns) <= 1:
+        # If the file is empty, we change the delimiter and try again
+        inflow = pd.read_csv(conf['files']['ext_inflow_file'], sep=',')
+    if not 'time' in inflow.columns:
+        inflow.rename(mapper={'valid_time': 'time'}, inplace=True, axis=1)
+    inflow.set_index('time', inplace=True)
     inflow.columns = ['inflow']
 
     # recreate mu to get the same shape as in the calcution mode

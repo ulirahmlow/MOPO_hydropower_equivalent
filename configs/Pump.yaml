@@ -1,0 +1,92 @@
+files:
+  # Input files
+  day_file: days.csv #\SE1_2016_days.csv  #\SE1_2016_days.csv  #SE1_2016_days_test
+  train_price_file: price.csv
+  ext_inflow_file: LR_inflow.csv # Not always
+  # Output files of the detaield model or historical data
+  M_file: meq.csv
+  basic_files: initial_params.csv
+  pump_data: pump.csv
+
+
+para_general:
+  category: !!int -1
+  segments: !!int 1
+  stations: !!int 1
+  segments_pump: !!int 1
+  segments_percent: [1] # [0.9 ,0.1]
+  small_ramp: !!int -1 # If -1 then turned off oth
+  long_ramp: !!int -1  # If -1 then turned off
+  alpha: [1] # [1] # share of energy content in each reservoir
+  up_aq: [0] # [[0,0],[1, 0]] [0] # upsteam stations
+  down_ad: [1] #  [[1,1],[0,1]] [1] # downstream stations
+
+para_PSO:
+  max_inter: !!int 100
+  population: !!int 25
+  use_multiprocessing: True
+  first_level_objectiv: !!str 'pump' # pump against_real_production
+  intertia: !!float 0.9
+  c1: !!float 1.49
+  c2: !!float 1.49
+  tol: !!float 1.0e-5
+  wMin: !!float 0.3
+  wMax: !!float 0.9
+  wDelta: !!float 0.1
+  show_iter: true
+  mu_percent: [1] # [1 , 0.25] # How much percent the mu per segment get from mu_0 calculation 
+  Q_break: [1]  # [1] [0.75, 0.25] # [0.75, 0.25]
+  #,'prod_spill_mul'] #,'mu_add'] #'mu_add', 'Smin', 'min_prod_multiplier','inflow_multiplier','rolling_prod_hours']
+  # Mmax and Mmin are percent of the maximum reservoir capacity
+  # Qmax and Qmin are total vales equal to the power as mu=1
+  # ramp1h and ramp3h are in power
+  # mu_add is between 0 and 1 
+  # all other are either scalling factors or absolute values
+  variables: [
+    'Mmax', 
+    #'Mmin', 
+    'Pmax', 
+    'Cmax',
+    'pump_loss']
+    # 'ramp1h', 'ramp3h']
+    #'Qmax', 'Qmin', 
+    #'ramp1h', 'ramp3h']
+    #'mu_add',
+    #'inflow_multiplier']
+    #,'min_prod_multiplier'] #,'prod_spill_mul'] #,'mu_add'] #'mu_add', 'Smin']
+  var_lim_min: {
+    'Mmax': 1, 
+    #'Mmin' : 0.01, 
+    'Pmax': 0.75,
+    'Cmax': 0.75,
+    'pump_loss':0.7}
+    # 'ramp1h': 0.05, 'ramp3h': 0.05}
+    #'mu_add': 0.01}
+    #'Qmax': 0.8, 'Qmin': 0.1, 
+    #'ramp1h': 50, 'ramp3h': 50}
+    #'mu_add': 0.01}
+    #'inflow_multiplier': 1} 
+    #'min_prod_multiplier': 0.5}
+    #'rolling_prod_hours': 24}
+  var_lim_max: {
+    'Mmax': 7, 
+    #'Mmin' : 0.25, 
+    #'Qmax': 1.1, 'Qmin': 1.1, 
+    'Pmax': 1.25,
+    'Cmax': 1.25,
+    'pump_loss':0.99 }
+    # 'ramp1h': 1.2, 'ramp3h': 1.2}
+    #'mu_add': 0.85}
+    #'ramp1h': 6000, 'ramp3h': 6000} # ,
+    #'mu_add': 0.95, 
+    #'inflow_multiplier': 1.5}
+    #'min_prod_multiplier': 10}
+    #'rolling_prod_hours': 336} 
+
+eq_additional_constraints: 'no'  # 'no' min_prod_multiplier
+
+area: area 
+
+output_filename_suffix: pump_test
+
+Time_needed_s: !!float 0

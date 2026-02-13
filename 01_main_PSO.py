@@ -2,9 +2,14 @@ import logging
 import multiprocessing
 import time
 import os
-from copy import deepcopy
 
-from get_period_data import get_period_data
+import sys
+from pathlib import Path
+
+# Make the src/ folder importable
+sys.path.append(str(Path(__file__).parent / "src"))
+
+from src.get_period_data import get_period_data
 from naive_aggregation import create_eq_model
 from read_scenario_data import read_scenario_data
 from run_PSO_multi import *
@@ -12,7 +17,7 @@ from set_config import set_config
 from set_pso_problem import set_pso_problem
 from save_output import save_output
 from read_ext_eq_inflow import get_inflow_and_mu
-import sys
+
 sys.stdout = open(os.devnull, 'w')
 mpl_handler = logging.getLogger('matplotlib')
 mpl_handler.setLevel(logging.ERROR)
@@ -25,17 +30,19 @@ if __name__ == '__main__':
     # Specify the data folder in .env file 
     folder_path =  os.getenv("SECRET_FOLDER_PATH")
 
-    config_file_name = 'SE1' 
-    areas = ['SE1'] # area list
+    config_file_name = 'RoR' #'SE1' # 'RoR' 
+    areas = ['FI'] #['NO1','NO2','NO3','NO4','NO5','SE1','SE2','SE3','SE4'] # area list ['CH', 'ES', 'FR', 'ITN1', 'PT', 'UK']
     years = '2018' # Select a year or a set of years like from_till: 2018_2020
+    cat = 1
     for area in areas:
         conf, param_pso = set_config(
             area=area, # Area 
             run_setup='Ext_inflow', # folder in the data
-            category=1,
+            category=cat,
             config_file_name=config_file_name,
             folder=folder_path,
-            year=years)
+            year=years,
+            overwrite_files=True)
         
         train_scenario= read_scenario_data(conf=conf)
         
@@ -64,7 +71,7 @@ if __name__ == '__main__':
             problem, eq_init, train_scenario) for n_particle in range(param_pso.nPop)]
         
         if conf['para_PSO']['use_multiprocessing']: 
-            with multiprocessing.Pool(processes=param_pso.nPop) as pool:  
+            with multiprocessing.Pool(processes=5) as pool:  
                 results_mulit = pool.map(run_initial_iteration, arguments)
         else:
             results_mulit = [run_initial_iteration(arg) for arg in arguments]
@@ -82,7 +89,7 @@ if __name__ == '__main__':
                 eq_init, train_scenario, global_best) for n_particle in range(param_pso.nPop)]
             
             if conf['para_PSO']['use_multiprocessing']:
-                with multiprocessing.Pool(processes=param_pso.nPop) as pool: # processes=param_pso.nPop
+                with multiprocessing.Pool(processes=5) as pool: # processes=param_pso.nPop
                     results_mulit = pool.map(run_iteration_pso, arguments)
             else:
                 results_mulit = [run_iteration_pso(arg) for arg in arguments]
@@ -92,7 +99,7 @@ if __name__ == '__main__':
             iteration_parameters, param_pso =  update_globals(
                 global_best['fitness'], iter, particles, param_pso, problem, iteration_parameters)
         
-        eqModel_output = write_to_output_model(eq_init, global_best,conf,problem)
+        eqModel_output = inititale_eq_model(global_best['position'], deepcopy(eq_init))
         elapsed_pso = time.time()-start_pso
 
         logger.info(

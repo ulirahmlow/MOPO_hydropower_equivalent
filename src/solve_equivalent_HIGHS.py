@@ -29,8 +29,6 @@ def solve_equivalent_HIGHS(scenario_data, eqModel:EqModel,problem, end_simulatio
     mu = eqModel.mu  # Production equivalent
     prob = scenario_data.probability  # Probability for each scenario
     EndRes = scenario_data.MTminShare # Reservoir content at the end of the planning period
-    CapU = scenario_data.upCapacity  # Total up-regulating capacity
-    CapD = scenario_data.dwnCapacity  # Total down-regulating capacity
     res = eqModel.nbr_stations  # Number of reservoirs in the river
     seg = eqModel.segments  # Number of segments in Qmax and mu
     TiE = scenario_data.initialEnergy  # Initial energy

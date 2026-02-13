@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import logging
 from dataclasses import dataclass
+from tabulate import tabulate
 from set_config import PSOparameters
 from naive_aggregation import EqModel
 from read_scenario_data import ScenarioData
@@ -56,7 +57,7 @@ def initialze_one_reservoir(var_min, var_max, initial_res_content, max_res_conte
     #var_max.loc[0,'ramp3h'] = np.max(eq_init.Qmax) * var_lim_max['ramp3h']
 
     if eq_init.Q_break:
-        var_max.loc[0,'Qmax'] = scenario.max_historical_production *var_lim_max['Qmax'] 
+        var_max.loc[0,'Qmax'] = scenario.max_historical_production * var_lim_max['Qmax'] 
         var_min.loc[0,'Qmax'] = scenario.max_historical_production * var_lim_min['Qmax'] 
     else: 
         for seg in range(eq_init.segments):
@@ -226,102 +227,178 @@ def initialze_three_reservoirs(var_min, var_max, initial_res_content, max_res_co
 
     return var_min, var_max
 
-def initialze_additional_parameter(var_min:pd.DataFrame,var_max:pd.DataFrame, eq_init:EqModel,params_pso:PSOparameters):
+def initialze_additional_parameter(var_min:dict,var_max:dict, eq_init:EqModel,params_pso:PSOparameters):
 
     var_lim_min = params_pso.var_lim_min
     var_lim_max = params_pso.var_lim_max
     for res in range (eq_init.nbr_stations):
         for seg in range(1,eq_init.segments):
-            var_min.loc[res,f'mu_{seg}'] = var_lim_min['mu_add']
-            var_max.loc[res,f'mu_{seg}'] = var_lim_max['mu_add']
+            if f'mu_{seg}' not in var_min:
+                var_min[f'mu_{seg}'] = {}
+                var_max[f'mu_{seg}'] = {}
+            var_min[f'mu_{seg}'][f'res_{res}'] = var_lim_min['mu_add']
+            var_max[f'mu_{seg}'][f'res_{res}'] = var_lim_max['mu_add']
     if eq_init.segments_pump>1:
         for res in range (eq_init.nbr_stations):
             for seg in range(1,eq_init.segments_pump):
-                var_min.loc[res,f'mu_pump_{seg}'] = var_lim_min['mu_add']
-                var_max.loc[res,f'mu_pump_{seg}'] = var_lim_max['mu_add']      
+                var_min[f'mu_pump_{seg}'][f'res_{res}'] = var_lim_min['mu_add']
+                var_max[f'mu_pump_{seg}'][f'res_{res}'] = var_lim_max['mu_add']      
 
-    var_max = var_max.drop('mu_add',axis=1)
-    var_min = var_min.drop('mu_add',axis=1)
+    var_max.pop('mu_add', None)
+    var_min.pop('mu_add', None)
     
+    return var_min, var_max
+
+def initial_multi_reservoirs(var_min:dict, var_max:dict,max_res_content:np.ndarray, eq_init:EqModel, params_pso:PSOparameters, scenario:ScenarioData):
+    var_lim_min = params_pso.var_lim_min
+    var_lim_max = params_pso.var_lim_max
+    for var in params_pso.varaibles:
+        var_min[var] = {}
+        var_max[var] = {}
+    for i_res in range(eq_init.nbr_stations):
+        var_min['Mmax'][f'res_{i_res}'] = np.max(max_res_content) * var_lim_min['Mmax']
+        var_min['Mmin'][f'res_{i_res}'] = np.max(max_res_content) * var_lim_min['Mmin']
+        var_max['Mmax'][f'res_{i_res}'] = np.max(max_res_content) * var_lim_max['Mmax']
+        var_max['Mmin'][f'res_{i_res}'] = np.max(max_res_content) * var_lim_max['Mmin']
+        if scenario.min_historical_production * var_lim_max['Qmin'] == 0:
+            logger.warning(f"Minimum historical production is zero. Setting Qmin to 0.1 to avoid zero production.")
+            var_max['Qmin'][f'res_{i_res}'] = scenario.max_historical_production * 0.05
+            var_min['Qmin'][f'res_{i_res}'] = 0
+        else:
+            var_max['Qmin'][f'res_{i_res}'] =  scenario.min_historical_production * var_lim_max['Qmin']
+            var_min['Qmin'][f'res_{i_res}'] =  var_lim_min['Qmin']
+
+        if eq_init.Q_break:
+            var_max['Qmax'][f'res_{i_res}'] = scenario.max_historical_production * var_lim_max['Qmax'] 
+            var_min['Qmax'][f'res_{i_res}'] = scenario.max_historical_production * var_lim_min['Qmax'] 
+        else: 
+            for seg in range(eq_init.segments):
+                if f'Qmax_{seg}' not in var_min:
+                    var_max[f'Qmax_{seg}'] = {}
+                    var_min[f'Qmax_{seg}'] = {}
+                var_max[f'Qmax_{seg}'][f'res_{i_res}'] = scenario.max_historical_production * var_lim_max['Qmax'] / (seg+1)
+                var_min[f'Qmax_{seg}'][f'res_{i_res}'] = scenario.max_historical_production * var_lim_min['Qmax'] / (seg+1)
+            if 'Qmax' in var_min:
+                var_max.pop('Qmax', None)
+                var_min.pop('Qmax', None)
+        
+        if 'ramp1h' in var_lim_min:
+            var_min['ramp1h'][f'res_{i_res}'] = scenario.max_historical_production * var_lim_min['ramp1h']
+            var_max['ramp1h'][f'res_{i_res}'] = scenario.max_historical_production * var_lim_max['ramp1h']
+            
+        if 'ramp3h' in var_lim_min:
+            var_min['ramp3h'][f'res_{i_res}'] = scenario.max_historical_production * var_lim_min['ramp3h']
+            var_max['ramp3h'][f'res_{i_res}'] = scenario.max_historical_production * var_lim_max['ramp3h']
+
+        change_var = ['Smin', 'inflow_multiplier']
+
+        for var in change_var:
+            if var in var_lim_min:
+                var_min[var][f'res_{i_res}'] = var_lim_min[var] 
+                var_max[var][f'res_{i_res}'] = var_lim_max[var]
     return var_min, var_max
 
 def set_pso_problem(scenario:ScenarioData, eq_init:EqModel, params_pso:PSOparameters):
 
     initial_res_content, max_res_content = calculate_initial_content(eq_init, scenario)
 
-    var_min =  pd.DataFrame(
-        np.zeros((eq_init.nbr_stations, params_pso.num_varaibles)),
-        columns=params_pso.varaibles)
-    var_max =  pd.DataFrame(
-        np.zeros((eq_init.nbr_stations, params_pso.num_varaibles)),
-        columns=params_pso.varaibles)
+    var_min =  {}
+    var_max =  {}
+    var_min, var_max = initial_multi_reservoirs(var_min, var_max,max_res_content, eq_init, params_pso, scenario)
+    # if eq_init.nbr_stations == 1:
+    #     var_min, var_max = initialze_one_reservoir(var_min, var_max, initial_res_content,max_res_content, eq_init, scenario,params_pso)
 
-    if eq_init.nbr_stations == 1:
-        var_min, var_max = initialze_one_reservoir(var_min, var_max, initial_res_content,max_res_content, eq_init, scenario,params_pso)
+    # elif eq_init.nbr_stations == 2:
+    #     var_min, var_max = initialze_two_reservoirs(var_min, var_max, initial_res_content,max_res_content, eq_init, scenario, params_pso)
 
-    elif eq_init.nbr_stations == 2:
-        var_min, var_max = initialze_two_reservoirs(var_min, var_max, initial_res_content,max_res_content, eq_init, scenario, params_pso)
-
-    elif eq_init.nbr_stations == 3: #res ==3
-        var_min, var_max = initialze_three_reservoirs(var_min, var_max, initial_res_content,max_res_content, eq_init, scenario, params_pso)
+    # elif eq_init.nbr_stations == 3: #res ==3
+    #     var_min, var_max = initialze_three_reservoirs(var_min, var_max, initial_res_content,max_res_content, eq_init, scenario, params_pso)
 
     if "mu_add" in params_pso.var_lim_max.keys():
         var_min, var_max = initialze_additional_parameter(var_min, var_max, eq_init, params_pso)
         
-    var_min.index = ['res_' +str(res_int) for res_int in var_min.index]
-    var_max.index = var_min.index
-    problem = PSOproblem(dim=len(var_max.columns), varMin=var_min, varMax=var_max, parameter=params_pso)
-    logger.info("Lower limit:\n%s", var_min.to_string(index=False))
-    logger.info("Upper limit:\n%s", var_max.to_string(index=False))
+    problem = PSOproblem(dim=pd.DataFrame(var_max).count().sum(), varMin=var_min, varMax=var_max, parameter=params_pso)
+    problem.res_array = [f"res_{i}" for i in range(eq_init.nbr_stations)]
+    problem.zip_array = []
+    for var in problem.varMin.keys():
+        for res in problem.res_array:
+            if res in problem.varMin[var].keys():
+                problem.zip_array.append((var, res))    
+
+    logger.info(
+        "Lower limit:\n%s", tabulate(pd.DataFrame(var_min).round(2).fillna("—").astype(float,errors='ignore'), headers="keys",tablefmt="grid"))
+    logger.info(
+        "Upper limit:\n%s", tabulate(pd.DataFrame(var_max).round(2).fillna("—").astype(float,errors='ignore'), headers="keys",tablefmt="grid"))
+    
 
     return problem
 
-def initialze_pump_reservoir(var_min, var_max, eq_init:EqModel, params_pso:PSOparameters):
+def initialze_pump_reservoir(var_min:dict, var_max:dict, eq_init:EqModel, params_pso:PSOparameters, scenario:ScenarioData):
     var_lim_min = params_pso.var_lim_min
     var_lim_max = params_pso.var_lim_max
-    per_res_varaible =['Mmax', 'Mmin', 'Pmax', 'ramp1h', 'ramp3h', 'Cmax','pump_loss']
-    for var in per_res_varaible:
-        if var in params_pso.varaibles:
-            for i_res in range(eq_init.nbr_stations):
-                var_min.loc[i_res,var] = var_lim_min[var] 
-                var_max.loc[i_res,var] = var_lim_max[var] 
 
-    if eq_init.segments>1:
-        for i_res in range(eq_init.nbr_stations):
-            for seg in range(eq_init.segments):
-                var_min.loc[0,f'Pmax_{seg}'] = var_lim_min['Pmax']/(seg+1)
-                var_max.loc[0,f'Pmax_{seg}'] = var_lim_max['Pmax']/((1.5*seg)**2+1)
-        
-        var_max = var_max.drop('Pmax',axis=1)
-        var_min = var_min.drop('Pmax',axis=1)
+    per_res_varaible = ['Mmax', 'Mmin','pump_loss', 'ramp1h', 'ramp3h', 'Smin', 'inflow_multiplier']
+    for i_res in range(eq_init.nbr_stations):
+        for var in per_res_varaible:
+            if var in params_pso.varaibles:
+                if var not in var_min:
+                    var_min[var] = {}
+                    var_max[var] = {}
+                var_min[var][f"res_{i_res}"] = var_lim_min[var] 
+                var_max[var][f"res_{i_res}"] = var_lim_max[var] 
 
-    if eq_init.segments_pump>1:
+        for seg in range(eq_init.segments):
+            if f'Pmax_{seg}' not in var_min:
+                var_min[f'Pmax_{seg}'] = {}
+                var_max[f'Pmax_{seg}'] = {}
+            var_min[f'Pmax_{seg}'][f"res_{i_res}"] = var_lim_min['Pmax']*scenario.max_historical_production/(seg+1)
+            var_max[f'Pmax_{seg}'][f"res_{i_res}"] = var_lim_max['Pmax']*scenario.max_historical_production/((1.5*seg)**2+1)
+
+    for i_res in range(eq_init.nbr_stations):
+        for seg in range(eq_init.segments_pump):
+            if f'Cmax_{seg}' not in var_min:
+                var_min[f'Cmax_{seg}'] = {}
+                var_max[f'Cmax_{seg}'] = {}           
+            var_min[f'Cmax_{seg}'][f"res_{i_res}"] = var_lim_min['Cmax']*scenario.max_historical_production/(seg+1)
+            var_max[f'Cmax_{seg}'][f"res_{i_res}"] = var_lim_max['Cmax']*scenario.max_historical_production/((1.5*seg)**2+1)
+
+    if 'Mmax' in params_pso.varaibles:
         for i_res in range(eq_init.nbr_stations):
-            for seg in range(eq_init.segments_pump):
-                var_min.loc[0,f'Cmax_{seg}'] = var_lim_min['Cmax']/(seg+1)
-                var_max.loc[0,f'Cmax_{seg}'] = var_lim_max['Cmax']/((1.5*seg)**2+1)
+            var_min['Mmax'][f"res_{i_res}"] = var_lim_min['Mmax'] * scenario.max_historical_production 
+            var_max['Mmax'][f"res_{i_res}"] = var_lim_max['Mmax'] * scenario.max_historical_production 
+
+    if 'ramp1h' in var_lim_min:
+        for i_res in range(eq_init.nbr_stations):
+            var_min['ramp1h'][f"res_{i_res}"] = scenario.max_historical_production * var_lim_min['ramp1h']
+            var_max['ramp1h'][f"res_{i_res}"] = scenario.max_historical_production * var_lim_max['ramp1h']
         
-        var_max = var_max.drop('Cmax',axis=1)
-        var_min = var_min.drop('Cmax',axis=1)
+    if 'ramp3h' in var_lim_min:
+        for i_res in range(eq_init.nbr_stations):
+            var_min['ramp3h'][f"res_{i_res}"] = scenario.max_historical_production * var_lim_min['ramp3h']
+            var_max['ramp3h'][f"res_{i_res}"] = scenario.max_historical_production * var_lim_max['ramp3h']
 
     return var_min, var_max
 
-def set_pso_problem_pump(eq_init:EqModel, params_pso:PSOparameters):
+def set_pso_problem_pump(eq_init:EqModel, params_pso:PSOparameters, scenario:ScenarioData):
 
-    var_min =  pd.DataFrame(
-        np.zeros((eq_init.nbr_stations, params_pso.num_varaibles)),
-        columns=params_pso.varaibles)
-    var_max =  pd.DataFrame(
-        np.zeros((eq_init.nbr_stations, params_pso.num_varaibles)),
-        columns=params_pso.varaibles)    
-    var_min, var_max = initialze_pump_reservoir(var_min, var_max, eq_init,params_pso)
+    var_min =  {}
+    var_max =  {}
+    var_min, var_max = initialze_pump_reservoir(var_min, var_max, eq_init,params_pso,scenario)
     if "mu_add" in params_pso.var_lim_max.keys():
         var_min, var_max = initialze_additional_parameter(var_min, var_max, eq_init, params_pso)
 
-    var_min.index = ['res_' +str(res_int) for res_int in var_min.index]
-    var_max.index = var_min.index
-    problem = PSOproblem(dim=len(var_max.columns), varMin=var_min, varMax=var_max, parameter=params_pso)
-    logger.info("Lower limit:\n%s", var_min.to_string(index=False))
-    logger.info("Upper limit:\n%s", var_max.to_string(index=False))
+    problem = PSOproblem(dim=(pd.DataFrame(var_max)>0).sum().sum(), varMin=var_min, varMax=var_max, parameter=params_pso)
+    problem.res_array = [f"res_{i}" for i in range(eq_init.nbr_stations)]
+    problem.zip_array = []
+    for var in problem.varMin.keys():
+        for res in problem.res_array:
+            if res in problem.varMin[var].keys():
+                problem.zip_array.append((var, res))    
+
+    logger.info(
+        "Lower limit:\n%s", tabulate(pd.DataFrame(var_min).round(2).fillna("—").astype(float,errors='ignore'), headers="keys",tablefmt="grid"))
+    logger.info(
+        "Upper limit:\n%s", tabulate(pd.DataFrame(var_max).round(2).fillna("—").astype(float,errors='ignore'), headers="keys",tablefmt="grid"))
+    
 
     return problem

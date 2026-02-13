@@ -2,33 +2,31 @@ files:
   # Input files
   day_file: days.csv #\SE1_2016_days.csv  #\SE1_2016_days.csv  #SE1_2016_days_test
   train_price_file: price.csv
-  ext_inflow_file: LR_inflow.csv # Not always
-  real_production: historical_production.csv # Not always
+  ext_inflow_file: inflow.csv # Not always
+  real_production: gen.csv # Not always
   # Output files of the detaield model or historical data
   M_file: meq.csv
   basic_files: initial_params.csv
-  pump_consumption: pump_consumption.csv
+  # pump_consumption: pump_consumption.csv
 
 
 para_general:
   category: !!int -1
-  segments: !!int 2
+  segments: !!int 1
   stations: !!int 1
-  segments_pump: !!int 2
+  segments_pump: !!int 1
   segments_percent: [1] # [0.9 ,0.1]
-  small_ramp: !!int -1 # If -1 then turned off oth
-  long_ramp: !!int -1  # If -1 then turned off
+  small_ramp: !!int 1 # If -1 then turned off oth
+  long_ramp: !!int 3 # If -1 then turned off
   alpha: [1] # [1] # share of energy content in each reservoir
   up_aq: [0] # [[0,0],[1, 0]] [0] # upsteam stations
   down_ad: [1] #  [[1,1],[0,1]] [1] # downstream stations
-  spill_adjust: 'only_spill_schedule' # total_spill, only_spill_schedule
-  mu_0_eq: 'only_first_segment' # 'mean', only_first_segment
-  eq_inflow: 'import' # 'import'
 
 para_PSO:
-  max_inter: !!int 50
-  population: !!int 10
-  first_level_objectiv: !!str 'pump' # pump against_real_production
+  max_inter: !!int 100
+  population: !!int 25
+  use_multiprocessing: True #True
+  first_level_objectiv: !!str 'against_real_production' # pump against_real_production
   intertia: !!float 0.9
   c1: !!float 1.49
   c2: !!float 1.49
@@ -37,8 +35,8 @@ para_PSO:
   wMax: !!float 0.9
   wDelta: !!float 0.1
   show_iter: true
-  mu_percent: [1, 0.95] # [1 , 0.25] # How much percent the mu per segment get from mu_0 calculation 
-  Q_break: []  # [1] [0.75, 0.25] # [0.75, 0.25]
+  mu_percent: [1] # [1 , 0.25] # How much percent the mu per segment get from mu_0 calculation 
+  Q_break: [1]  # [1] [0.75, 0.25] # [0.75, 0.25]
   #,'prod_spill_mul'] #,'mu_add'] #'mu_add', 'Smin', 'min_prod_multiplier','inflow_multiplier','rolling_prod_hours']
   # Mmax and Mmin are percent of the maximum reservoir capacity
   # Qmax and Qmin are total vales equal to the power as mu=1
@@ -46,24 +44,16 @@ para_PSO:
   # mu_add is between 0 and 1 
   # all other are either scalling factors or absolute values
   variables: [
-    'Mmax', 
-    #'Mmin', 
-    'Pmax', 
-    'Cmax',
-    'pump_loss',
-    'mu_add']
-    #'Qmax', 'Qmin', 
-    #'ramp1h', 'ramp3h']
+    'Mmax', 'Mmin', 'Qmax', 'Qmin', 
+    'ramp1h', 'ramp3h',
     #'mu_add',
-    #'inflow_multiplier']
+    'inflow_multiplier']
     #,'min_prod_multiplier'] #,'prod_spill_mul'] #,'mu_add'] #'mu_add', 'Smin']
   var_lim_min: {
-    'Mmax': 1000, 
-    #'Mmin' : 0.01, 
-    'Pmax': 4000,
-    'Cmax': 4000,
-    'pump_loss':0.7,
-    'mu_add': 0.01}
+    'Mmax': 0.85, 'Mmin' : 0.1, 'Qmax': 0.75, 'Qmin': 0.01, 
+    'ramp1h': 0.05, 'ramp3h': 0.05,
+    #'mu_add': 0.01,
+    'inflow_multiplier': 1} 
     #'Qmax': 0.8, 'Qmin': 0.1, 
     #'ramp1h': 50, 'ramp3h': 50}
     #'mu_add': 0.01,
@@ -71,13 +61,10 @@ para_PSO:
     #'min_prod_multiplier': 0.5}
     #'rolling_prod_hours': 24}
   var_lim_max: {
-    'Mmax': 80000, 
-    #'Mmin' : 0.25, 
-    #'Qmax': 1.1, 'Qmin': 1.1, 
-    'Pmax': 10000,
-    'Cmax': 10000,
-    'pump_loss':0.99,
-    'mu_add': 0.85}
+    'Mmax': 1.5, 'Mmin' : 0.4, 'Qmax': 1.25, 'Qmin': 6, 
+    'ramp1h': 1.2, 'ramp3h': 1.2, # ,
+    #'mu_add': 0.8, 
+    'inflow_multiplier': 1.5}
     #'ramp1h': 6000, 'ramp3h': 6000} # ,
     #'mu_add': 0.95, 
     #'inflow_multiplier': 1.5}
@@ -88,6 +75,6 @@ eq_additional_constraints: 'no'  # 'no' min_prod_multiplier
 
 area: area 
 
-output_filename_suffix: test_pump_seg_prod_seg
+output_filename_suffix: test_all
 
 Time_needed_s: !!float 0

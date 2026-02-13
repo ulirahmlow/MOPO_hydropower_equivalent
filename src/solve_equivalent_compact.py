@@ -376,7 +376,7 @@ def solve_equivalent_pump(scenario_data,eqModel:EqModel,problem,end_simulation=0
                                     ub=P_max_values,
                                     name="P_seg")      
         else:    
-            P_max_values = {ind: eqModel.Pmax.get('res_'+ str(ind[1]), None) for ind in indices}
+            P_max_values = {ind: eqModel.Pmax.get('Pmax_0').get('res_'+ str(ind[1]), None) for ind in indices}
             P = model_equivalent.addVars(indices,
                                     lb =0,
                                     ub=P_max_values,
@@ -397,9 +397,9 @@ def solve_equivalent_pump(scenario_data,eqModel:EqModel,problem,end_simulation=0
             # Caclte the the maximum consumption for the helper function to not produce and cosume max at the same time
             C_max = sum(C_max_values[0,0,0,i] for i in range(res))
             
-        else:
-            C_max = [(sum(mu[f'mu_pump_{k}'][res_array[i]] * eqModel.Cmax.get('Cmax_{k}').get(f'res_{i}', None) for k in range(seg))) for i in range(res)]
-            C_max_values = {ind: eqModel.Cmax.get('res_'+ str(ind[1]), None) for ind in indices}
+        else:     
+            #C_max = [(sum(mu[f'mu_pump_{k}'][res_array[i]] * eqModel.Cmax.get('Cmax_{k}').get(f'res_{i}', None) for k in range(seg))) for i in range(res)]
+            C_max_values = {ind: eqModel.Cmax.get('Cmax_0').get('res_'+ str(ind[1]), None) for ind in indices}
             C = model_equivalent.addVars(indices,
                                         lb =0,
                                         ub=C_max_values,
