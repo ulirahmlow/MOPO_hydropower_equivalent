@@ -374,23 +374,18 @@ def create_reservoir_content(train_scenario:ScenarioData, cluster_data,conf):
         logger.info('M0share has already the right amount of points')
         return train_scenario, None
     logger.info('Reservoir content gets created based on historical data')
-    day_counter = 0
-    years= []
-    while day_counter in train_scenario.days.index:
-        year = (train_scenario.days.loc[day_counter,'scen1'][0:4])
-        years.append('Y_'+year)
-        day_counter += 366
 
-    historical_reservoir = conf['file_location']['input'] + 'historical_reservoir_SE1.csv'
+    historical_reservoir = conf['file_location']['input'] + 'historical_reservoir_SE1_2018.csv'
     reservoir_content = pd.read_csv(historical_reservoir, delimiter= ';',header=0)
-    reservoir_content = reservoir_content[years]
-    m0_share.loc[:,'Start'] = reservoir_content.iloc[0,0] # Set the start to real data start
+    m0_share.loc[:,'Start'] = reservoir_content.loc[0,'Energy (MWh)'] 
+    reservoir_content_df = reservoir_content.loc[:,['Energy (MWh)']]
+    year = reservoir_content.loc[0,'Year'] # Set the start to real data start
 
     for counter, day_of_year in enumerate(cluster_data.id):
-        m0_share_add = linear_interpolation(reservoir_content, day_of_year, int(year))
+        m0_share_add = linear_interpolation(reservoir_content_df, day_of_year, int(year))
         # As the last data point it always goes until the end of the content data thus take the last value 
         if counter+1 == len(cluster_data.id): 
-            train_scenario.MTminShare[m0_share.columns[counter]] = reservoir_content.iloc[-1,0] / m0_share.iloc[counter,0]
+            train_scenario.MTminShare[m0_share.columns[counter]] = reservoir_content_df.iloc[-1,0] / m0_share.iloc[counter,0]
         else:
             m0_share = pd.concat([m0_share, m0_share_add], axis=1).interpolate()
             # Create MTminShare from real data of m0_share 
@@ -398,10 +393,9 @@ def create_reservoir_content(train_scenario:ScenarioData, cluster_data,conf):
 
     train_scenario.M0share = m0_share
     if len(reservoir_content) < len(train_scenario.days)*24:
-        reservoir_content = extend_weekly_to_hourly(reservoir_content, year)
-        reservoir_content *= train_scenario.max_content_energy
+        reservoir_content_df = extend_weekly_to_hourly(reservoir_content_df, year)
     
-    return train_scenario, reservoir_content
+    return train_scenario, reservoir_content_df
 
 
 def get_period_data(

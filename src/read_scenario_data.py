@@ -1,9 +1,9 @@
+import os
 import pandas as pd
 from dataclasses import dataclass
 import logging
 import numpy as np
 from pathlib import Path
-
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -22,6 +22,15 @@ class ScenarioData:
     min_historical_production: float = None # Min historical production, if available
     pump_consumption: pd.DataFrame = None # Pump consumption data, if available
     real_production: pd.DataFrame = None # Real production data, if available
+
+def read_entsoe_data(file_path: str):
+
+    API_KEY = os.getenv("ENTSOE_API_KEY")
+    SE1_EIC = "10Y1001A1001A44P"   # SE1 bidding zone
+
+
+
+
 
 def read_scenario_data(conf:dict) -> ScenarioData:
     """ Read the data that is needed for the scenarios and create the ScenarioData dataclass
@@ -43,9 +52,14 @@ def read_scenario_data(conf:dict) -> ScenarioData:
     hours, scen = scenario_data.price.shape
     scenario_data.hours = hours # hours in each scenario
     scenario_data.scenarios = scen # nbr scenarios
-    M_temp = pd.read_csv(conf['files']['M_file'],delimiter=';')
-    scenario_data.M0share = M_temp.iloc[:-1, 1:]
-    scenario_data.MTminShare = M_temp.iloc[-1,1:] #§ only one value for all
+    if Path(conf['files']['M_file']).is_file():
+        M_temp = pd.read_csv(conf['files']['M_file'],delimiter=';')
+        scenario_data.M0share = M_temp.iloc[:-1, 1:]
+        scenario_data.MTminShare = M_temp.iloc[-1,1:] #§ only one value for all
+    else:
+        scenario_data.M0share = pd.DataFrame(np.full((1, scenario_data.scenarios), 0.5), columns=[f'scen_{i}' for i in range(scenario_data.scenarios)])
+        scenario_data.MTminShare = 0.1
+        logger.warning(f"M file not found. Setting M0share to 0.5 and MTminShare to 0.1 for all scenarios.")
 
     if 'real_production' in conf['files']:
         real_production = pd.read_csv(conf['files']['real_production'],delimiter=';',index_col=[0]).reset_index(drop=True)

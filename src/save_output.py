@@ -145,6 +145,22 @@ def save_output_pump(config,train_scenario,eq_updated, iteration_parameters,prob
         columns={f"scen{k}" :f"consumption_scen{k}" for k in range(1,eq_updated.scenarios+1)})
     output_file_data = pd.concat([output_file_data, eqPower, eqContent, eqConsumption],axis=1)
     output_file_data.to_csv(output_folder + filename + "data.csv", sep=";", index=False)
+    create_plot(train_scenario,config,filename, eqModel_trainResults)
+    if train_scenario.pump_consumption.sum().sum() > 0:
+        create_consumption_plot(train_scenario,config,filename, eqModel_trainResults)
+
+def create_consumption_plot(train_scenario,config,filename, eqModel_trainResults):
+    tim = train_scenario.hours
+    t = np.arange(sum(train_scenario.hours))
+    original_power = pd.DataFrame()
+    eqModel_power = pd.DataFrame()
+    plt.figure(figsize=(15, 6))
+
+    for scen in range(1,train_scenario.scenarios+1):
+        original_power = pd.concat([original_power, train_scenario.pump_consumption['scen'+str(scen)].dropna().rename(0)]).reset_index(drop=True)
+        eqModel_power = pd.concat([eqModel_power, eqModel_trainResults.consumption['scen'+str(scen)].dropna().rename(0)]).reset_index(drop=True)
+        if scen < train_scenario.scenarios:
+            plt.axvline(x=train_scenario.hours[scen-1])
 
 def create_plot(train_scenario,config,filename, eqModel_trainResults, original_system=None):
     tim = train_scenario.hours
@@ -155,10 +171,7 @@ def create_plot(train_scenario,config,filename, eqModel_trainResults, original_s
     plt.figure(figsize=(15, 6))
 
     for scen in range(1,train_scenario.scenarios+1):
-        if config['para_PSO']['first_level_objectiv'] == 'against_real_production':
-            original_power = pd.concat([original_power, train_scenario.real_production['scen'+str(scen)].dropna().rename(0)]).reset_index(drop=True)
-        else:
-            original_power = pd.concat([original_power, original_system.power['scen'+str(scen)].dropna().rename(0)]).reset_index(drop=True)
+        original_power = pd.concat([original_power, train_scenario.real_production['scen'+str(scen)].dropna().rename(0)]).reset_index(drop=True)
         eqModel_power = pd.concat([eqModel_power, eqModel_trainResults.power['scen'+str(scen)].dropna().rename(0)]).reset_index(drop=True)
         if scen < train_scenario.scenarios:
             plt.axvline(x=train_scenario.hours[scen-1])

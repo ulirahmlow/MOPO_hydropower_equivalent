@@ -266,7 +266,7 @@ def initial_multi_reservoirs(var_min:dict, var_max:dict,max_res_content:np.ndarr
             var_min['Qmin'][f'res_{i_res}'] = 0
         else:
             var_max['Qmin'][f'res_{i_res}'] =  scenario.min_historical_production * var_lim_max['Qmin']
-            var_min['Qmin'][f'res_{i_res}'] =  var_lim_min['Qmin']
+            var_min['Qmin'][f'res_{i_res}'] =  scenario.min_historical_production * var_lim_min['Qmin']
 
         if eq_init.Q_break:
             var_max['Qmax'][f'res_{i_res}'] = scenario.max_historical_production * var_lim_max['Qmax'] 

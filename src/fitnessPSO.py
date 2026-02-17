@@ -1,7 +1,8 @@
 import numpy as np
 # from solve_equivalent import solve_equivalent
 from solve_equivalent_compact import solve_equivalent,solve_equivalent_pump
-from naive_aggregation import EqModel
+from set_pso_problem import PSOproblem
+from naive_aggregation import EqModel, ScenarioData
 import logging
 from copy import deepcopy
 
